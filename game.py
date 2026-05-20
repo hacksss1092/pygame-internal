@@ -12,7 +12,7 @@ from button import Button
 import random
  
 # shape parameters
-size = width, height = (800, 800)
+size = width, height = (1000, 1000)
  
 # initiallize the app
 pygame.init()
@@ -20,6 +20,7 @@ pygame.init()
 SCREEN = pygame.display.set_mode(size) # set window size
 pygame.display.set_caption("Menu")
 BG = pygame.image.load("assets/Background.png")
+BG = pygame.transform.scale(BG, size)
  
 def get_font(size): # Returns Press-Start-2P in the desired size
     return pygame.font.Font("assets/font.ttf", size)
@@ -35,7 +36,7 @@ def play():
     road_w = int(width/1.6)
     roadmark_w = int(width/80)
     # location parameters
-    right_lane = width/2 + road_w/4
+    right_lane = width/2 + road_w/3
     left_lane = width/2 - road_w/4
  
     running = True
@@ -45,56 +46,66 @@ def play():
     # apply changes
     pygame.display.update()
  
+# load game background
+    game_bg = pygame.image.load("assets/road.jpg")
+    
     # load player vehicle
-    car = pygame.image.load("assets/car.png")
+    car = pygame.image.load("assets/truck.png")
     #resize image
-    #car = pygame.transform.scale(car, (250, 250))
+    car = pygame.transform.scale(car, (200, 200))
     car_loc = car.get_rect()
     car_loc.center = right_lane, height*0.8
  
     # load enemy vehicle
-    car2 = pygame.image.load("assets/otherCar.png")
-    car2_loc = car2.get_rect()
-    car2_loc.center = left_lane, height*0.2
+    enemy_cars = []
+    for i in range(5):  # add 5 enemy cars
+        car2 = pygame.image.load("assets/car orange.jpg")
+        car2 = pygame.transform.scale(car2, (200, 200))
+        car2 = pygame.transform.rotate(car2, 270)
+        car2_loc = car2.get_rect()
+        car2_loc.center = left_lane if i % 2 == 0 else right_lane, -400 - i * 2000
+        enemy_cars.append((car2, car2_loc))
  
     counter = 0
+    current_lane = right_lane  # start in right lane
+    
     # game loop
     while running:
-        counter += 1
- 
-        # increase game difficulty overtime
-        if counter == 5000:
-            speed += 0.15
-            counter = 0
-            print("level up", speed)
- 
-        # animate enemy vehicle
-        car2_loc[1] += speed
-        if car2_loc[1] > height:
-            # randomly select lane
-            if random.randint(0,1) == 0:
-                car2_loc.center = right_lane, -200
-            else:
-                car2_loc.center = left_lane, -200
- 
-        # end game logic
-        if car_loc[0] == car2_loc[0] and car2_loc[1] > car_loc[1] - 250:
-            print("GAME OVER! YOU LOST!")
-            break
- 
-        # event listeners
+        # handle events
         for event in pygame.event.get():
-            if event.type == QUIT:
-                # collapse the app
+            if event.type == pygame.QUIT:
                 running = False
-            if event.type == KEYDOWN:
-                # move user car to the left
-                if event.key in [K_a, K_LEFT]:
-                    car_loc = car_loc.move([-int(road_w/2), 0])
-                # move user car to the right
-                if event.key in [K_d, K_RIGHT]:
-                    car_loc = car_loc.move([int(road_w/2), 0])
-       
+            elif event.type == pygame.KEYDOWN:
+                if event.key == K_LEFT:
+                    current_lane = left_lane
+                elif event.key == K_RIGHT:
+                    current_lane = right_lane
+
+        counter += 1
+
+        # update player position to current lane
+        car_loc.center = current_lane, height*0.8
+
+        # animate enemy vehicles
+        for car2, car2_loc in enemy_cars:
+            car2_loc[1] += speed
+            if car2_loc[1] > height:
+                # randomly select lane
+                if random.randint(0,1) == 0:
+                    car2_loc.center = right_lane, -200
+                else:
+                    car2_loc.center = left_lane, -200
+
+        # end game logic
+        for car2, car2_loc in enemy_cars:
+            if car_loc.colliderect(car2_loc):
+                print("GAME OVER! YOUR TRASH!")
+                running = False
+                break
+
+        # draw background
+        SCREEN.blit(game_bg, (0, 0))
+        
         # draw road
         pygame.draw.rect(
             SCREEN,
@@ -118,7 +129,8 @@ def play():
  
         # place car images on the screen
         SCREEN.blit(car, car_loc)
-        SCREEN.blit(car2, car2_loc)
+        for car2, car2_loc in enemy_cars:
+            SCREEN.blit(car2, car2_loc)
         # apply changes
         pygame.display.update()
  
@@ -135,20 +147,17 @@ def main_menu():
         MENU_MOUSE_POS = pygame.mouse.get_pos()
  
         MENU_TEXT = get_font(64).render("MAIN MENU", True, "#b68f40")
-        MENU_RECT = MENU_TEXT.get_rect(center=(400, 100))
+        MENU_RECT = MENU_TEXT.get_rect(center=(500, 200))
  
-        PLAY_BUTTON = Button(image=pygame.image.load("assets/Play Rect.png"), pos=(400, 250),
+        PLAY_BUTTON = Button(image=pygame.image.load("assets/Play Rect.png"), pos=(500, 350),
                             text_input="PLAY", font=get_font(32), base_color="#d7fcd4", hovering_color="White")
        
-        OPTIONS_BUTTON = Button(image=pygame.image.load("assets/Options Rect.png"), pos=(400, 400),
-                            text_input="OPTIONS", font=get_font(32), base_color="#d7fcd4", hovering_color="White")
-       
-        QUIT_BUTTON = Button(image=pygame.image.load("assets/Quit Rect.png"), pos=(400, 550),
+        QUIT_BUTTON = Button(image=pygame.image.load("assets/Quit Rect.png"), pos=(500, 500),
                             text_input="QUIT", font=get_font(32), base_color="#d7fcd4", hovering_color="White")
  
         SCREEN.blit(MENU_TEXT, MENU_RECT)
  
-        for button in [PLAY_BUTTON, OPTIONS_BUTTON, QUIT_BUTTON]:
+        for button in [PLAY_BUTTON, QUIT_BUTTON]:
             button.changeColor(MENU_MOUSE_POS)
             button.update(SCREEN)
        
@@ -159,21 +168,11 @@ def main_menu():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if PLAY_BUTTON.checkForInput(MENU_MOUSE_POS):
                     play()
-                if OPTIONS_BUTTON.checkForInput(MENU_MOUSE_POS):
-                    print("call options function")
-                    #options()
                 if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
                     pygame.quit()
                     sys.exit()
  
         pygame.display.update()
- 
-play()
- 
- 
-# collapse application window
-pygame.quit()
-sys.exit()
 
 if __name__ == '__main__':
     main_menu()
